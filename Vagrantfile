@@ -11,5 +11,15 @@ SCRIPT
 Vagrant.configure("2") do |config|
     config.vm.box = "debian/stretch64"
 
+    config.vm.provider "virtualbox" do |v|
+        second_disk = '.vagrant/machines/default/virtualbox/disk2.vdi'
+
+        # Create and attach disk
+        unless File.exist?(second_disk)
+            v.customize ['createhd', '--filename', second_disk, '--format', 'VDI', '--size', 1 * 1024]
+        end
+        v.customize ['storageattach', :id, '--storagectl', 'SATA Controller', '--port', 1, '--device', 0, '--type', 'hdd', '--medium', second_disk]
+    end
+
     config.vm.provision "shell", inline: $pre_provision
 end

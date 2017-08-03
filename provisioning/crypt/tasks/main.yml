@@ -1,0 +1,45 @@
+- name: install cryptsetup
+  become: true
+  package:
+    name: cryptsetup
+    state: present
+
+- name: install parted
+  become: true
+  package:
+    name: parted
+    state: present
+
+- name: create partition
+  become: true
+  parted:
+    device: /dev/sdb
+    number: 1
+    state: present
+  register: partition
+
+- name: cryp disk
+  become: true
+  shell: 'echo -n "pass" | cryptsetup luksFormat /dev/sdb1 -'
+  when: partition.changed
+
+- name: decrypt disk
+  become: true
+  shell: 'echo -n "pass" | cryptsetup luksOpen --key-file=- /dev/sdb1 sdb1'
+  args:
+    creates: /dev/mapper/sdb1
+
+- name: create filesystem
+  become: true
+  filesystem:
+    fstype: ext4
+    dev: /dev/mapper/sdb1
+
+- name: mount sdb1
+  become: true
+  mount:
+    path: /mnt
+    src: /dev/mapper/sdb1
+    fstype: ext4
+    state: present
+    opts: nofail

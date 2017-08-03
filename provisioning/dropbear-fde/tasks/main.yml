@@ -1,0 +1,74 @@
+- name: install dropbear
+  become: true
+  package:
+    name: dropbear
+    state: present
+
+- name: set dropbear configuration
+  become: true
+  lineinfile:
+    path: /etc/dropbear-initramfs/config
+    regexp: '^#?DROPBEAR_OPTIONS='
+    line: 'DROPBEAR_OPTIONS="-p 4748 -s -j -k -I 60"'
+  notify: rebuild initramfs
+
+- name: add public key
+  become: true
+  authorized_key:
+    user: "{{ ansible_user }}"
+    state: present
+    path: '/etc/dropbear-initramfs/authorized_keys'
+    key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+    key_options: 'no-port-forwarding,no-agent-forwarding,no-X11-forwarding,command="/bin/cryptroot-unlock"'
+  notify: rebuild initramfs
+
+- name: get network drivers
+  shell: 'grep "DRIVER=" /sys/class/net/{{ dropbear_fde_initramfs_interface }}/device/uevent | cut -d= -f2'
+  register: drivers
+
+- name: set network drivers
+  become: true
+  lineinfile:
+    path: /etc/initramfs-tools/modules
+    line: "{{ drivers.stdout }}"
+  notify: rebuild initramfs
+
+- name: set device configuration
+  become: true
+  lineinfile:
+    path: /etc/initramfs-tools/initramfs.conf
+    regexp: '^DEVICE='
+    line: "DEVICE={{ dropbear_fde_initramfs_interface }}"
+  notify: rebuild initramfs
+
+- name: set ip configuration
+  become: true
+  lineinfile:
+    path: /etc/initramfs-tools/conf.d/network
+    line: "export IP=:::::{{ dropbear_fde_initramfs_interface }}:dhcp"
+    create: true
+  notify: rebuild initramfs
+
+- name: flush interface
+  become: true
+  lineinfile:
+    path: /etc/network/interfaces
+    line: '    pre-up ip addr flush dev {{ dropbear_fde_initramfs_interface }}'
+    insertafter: "^iface {{ dropbear_fde_initramfs_interface }} inet"
+  notify: rebuild initramfs
+
+- name: include cryptsetup in initramfs
+  become: true
+  lineinfile:
+    path: /etc/cryptsetup-initramfs/conf-hook
+    line: 'CRYPTSETUP=y'
+    regexp: '^#?CRYPTSETUP='
+  notify: rebuild initramfs
+
+- name: set cryptdevice kernel param
+  become: true
+  lineinfile:
+    path: /etc/default/grub
+    line: 'GRUB_CMDLINE_LINUX_DEFAULT="quiet cryptdevice=/dev/sdb1:sdb1"'
+    regexp: 'GRUB_CMDLINE_LINUX_DEFAULT="quiet"'
+  notify: update grub

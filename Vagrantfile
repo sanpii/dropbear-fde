@@ -11,6 +11,8 @@ SCRIPT
 Vagrant.configure("2") do |config|
     config.vm.box = "debian/stretch64"
 
+    config.vm.network "forwarded_port", guest: 4748, host: 4748
+
     config.vm.provider "virtualbox" do |v|
         second_disk = '.vagrant/machines/default/virtualbox/disk2.vdi'
 
@@ -22,4 +24,8 @@ Vagrant.configure("2") do |config|
     end
 
     config.vm.provision "shell", inline: $pre_provision
+
+    config.vm.provision "ansible" do |ansible|
+        ansible.playbook = "provisioning/playbook.yml"
+    end
 end

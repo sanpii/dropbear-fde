@@ -1,0 +1,7 @@
+- name: rebuild initramfs
+  become: true
+  command: 'update-initramfs -u'
+
+- name: update grub
+  become: true
+  command: 'update-grub'

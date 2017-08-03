@@ -1,0 +1,4 @@
+dropbear_fde_initramfs_ip: "{{ ansible_default_ipv4.address }}"
+dropbear_fde_initramfs_netmask: "{{ ansible_default_ipv4.netmask }}"
+dropbear_fde_initramfs_gateway: "{{ ansible_default_ipv4.gateway }}"
+dropbear_fde_initramfs_interface: "{{ ansible_default_ipv4.interface }}"
